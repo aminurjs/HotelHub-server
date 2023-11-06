@@ -6,8 +6,13 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const port = process.env.port || 5000;
 
 //MiddleWare
-app.use(cors());
 app.use(express.json());
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.sz2xe62.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -18,6 +23,13 @@ const client = new MongoClient(uri, {
     strict: true,
     deprecationErrors: true,
   },
+});
+
+const roomsCollection = client.db("hotelhub").collection("rooms");
+
+app.get("/api/v1/rooms", async (req, res) => {
+  const rooms = await roomsCollection.find().toArray();
+  res.send(rooms);
 });
 
 async function run() {
