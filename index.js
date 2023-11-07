@@ -55,10 +55,18 @@ app.get("/api/v1/booking/:email", async (req, res) => {
   res.send(bookedRooms);
 });
 
-// Data get functions
+// Data post functions
 app.post("/api/v1/booking", async (req, res) => {
   const data = req.body;
   const result = await bookingCollection.insertOne(data);
+  res.send(result);
+});
+
+// Data Delete functions
+app.delete("/api/v1/booking/delete/:id", async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: new ObjectId(id) };
+  const result = await bookingCollection.deleteOne(query);
   res.send(result);
 });
 
