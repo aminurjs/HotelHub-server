@@ -48,6 +48,14 @@ app.get("/api/v1/room/:id", async (req, res) => {
   const rooms = await roomsCollection.findOne(query);
   res.send(rooms);
 });
+app.get("/api/v1/booking/:email", async (req, res) => {
+  const email = req.params.email;
+  const query = { email: email };
+  const bookedRooms = await bookingCollection.find(query).toArray();
+  res.send(bookedRooms);
+});
+
+// Data get functions
 app.post("/api/v1/booking", async (req, res) => {
   const data = req.body;
   const result = await bookingCollection.insertOne(data);
