@@ -27,11 +27,16 @@ const client = new MongoClient(uri, {
 
 const roomsCollection = client.db("hotelhub").collection("rooms");
 const testimonialsCollection = client.db("hotelhub").collection("testimonials");
+const bookingCollection = client.db("hotelhub").collection("booking");
 
 // Data get functions
 app.get("/api/v1/rooms", async (req, res) => {
   const rooms = await roomsCollection.find().toArray();
   res.send(rooms);
+});
+app.get("/api/v1/featured", async (req, res) => {
+  const featured = await roomsCollection.find().skip(9).limit(3).toArray();
+  res.send(featured);
 });
 app.get("/api/v1/testimonials", async (req, res) => {
   const testimonials = await testimonialsCollection.find().toArray();
