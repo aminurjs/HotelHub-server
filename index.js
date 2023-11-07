@@ -48,6 +48,11 @@ app.get("/api/v1/room/:id", async (req, res) => {
   const rooms = await roomsCollection.findOne(query);
   res.send(rooms);
 });
+app.post("/api/v1/booking", async (req, res) => {
+  const data = req.body;
+  const result = await bookingCollection.insertOne(data);
+  res.send(result);
+});
 
 async function run() {
   try {
