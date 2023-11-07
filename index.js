@@ -69,6 +69,23 @@ app.delete("/api/v1/booking/delete/:id", async (req, res) => {
   const result = await bookingCollection.deleteOne(query);
   res.send(result);
 });
+// Data Update functions
+app.patch("/api/v1/booking/updatedate/:id", async (req, res) => {
+  const id = req.params.id;
+  const newDate = req.body;
+  const query = { _id: new ObjectId(id) };
+  const options = { upsert: true };
+
+  const updatedDate = {
+    $set: {
+      startDate: newDate.updatedStartDate,
+      endDate: newDate.updatedEndDate,
+      bookingDays: newDate.duration,
+    },
+  };
+  const result = await bookingCollection.updateOne(query, updatedDate, options);
+  res.send(result);
+});
 
 async function run() {
   try {
