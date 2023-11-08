@@ -2,11 +2,14 @@ const express = require("express");
 const app = express();
 require("dotenv").config();
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.port || 5000;
 
 //MiddleWare
 app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
     origin: "http://localhost:5173",
@@ -28,6 +31,40 @@ const client = new MongoClient(uri, {
 const roomsCollection = client.db("hotelhub").collection("rooms");
 const testimonialsCollection = client.db("hotelhub").collection("testimonials");
 const bookingCollection = client.db("hotelhub").collection("booking");
+
+// middlewares
+//verify token and  access
+const verifyToken = (req, res, next) => {
+  const { token } = req.cookies;
+
+  //if client does not send token
+  if (!token) {
+    return res.status(401).send({ message: "UnAuthorized Access" });
+  }
+
+  // verify a token
+  jwt.verify(token, process.env.SECRETE, function (err, decoded) {
+    if (err) {
+      return res.status(401).send({ message: "UnAuthorized Access" });
+    }
+    // attach decoded user so that others can get it
+    req.user = decoded;
+    next();
+  });
+};
+
+app.post("/api/v1/auth/access-token", async (req, res) => {
+  const user = req.body;
+  const token = jwt.sign(user, process.env.SECRETE, { expiresIn: "1h" });
+  console.log(token);
+  res
+    .cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+    })
+    .send({ success: true });
+});
 
 // Data get functions
 app.get("/api/v1/rooms", async (req, res) => {
@@ -57,7 +94,7 @@ app.get("/api/v1/room/:id", async (req, res) => {
   const rooms = await roomsCollection.findOne(query);
   res.send(rooms);
 });
-app.get("/api/v1/booking/:email", async (req, res) => {
+app.get("/api/v1/booking/:email", verifyToken, async (req, res) => {
   const email = req.params.email;
   const query = { email: email };
   const bookedRooms = await bookingCollection.find(query).toArray();
