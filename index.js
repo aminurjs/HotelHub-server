@@ -86,6 +86,19 @@ app.patch("/api/v1/booking/updatedate/:id", async (req, res) => {
   const result = await bookingCollection.updateOne(query, updatedDate, options);
   res.send(result);
 });
+app.patch("/api/v1/review/:id", async (req, res) => {
+  const id = req.params.id;
+  const comment = req.body;
+  const query = { _id: new ObjectId(id) };
+  const options = { upsert: true };
+  const update = {
+    $push: {
+      reviews: comment,
+    },
+  };
+  const result = await roomsCollection.updateOne(query, update, options);
+  res.send(result);
+});
 
 async function run() {
   try {
