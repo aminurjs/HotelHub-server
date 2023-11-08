@@ -95,8 +95,14 @@ app.get("/api/v1/room/:id", async (req, res) => {
   res.send(rooms);
 });
 app.get("/api/v1/booking/:email", verifyToken, async (req, res) => {
-  const email = req.params.email;
-  const query = { email: email };
+  const userEmail = req.params.email;
+  const tokenEmail = req.user.email;
+
+  if (tokenEmail !== userEmail) {
+    return res.status(403).send({ message: "Forbidden access" });
+  }
+
+  const query = { email: userEmail };
   const bookedRooms = await bookingCollection.find(query).toArray();
   res.send(bookedRooms);
 });
@@ -105,15 +111,32 @@ app.get("/api/v1/booking/:email", verifyToken, async (req, res) => {
 app.post("/api/v1/booking", async (req, res) => {
   const data = req.body;
   const result = await bookingCollection.insertOne(data);
-  res.send(result);
+  const query = { _id: new ObjectId(data.id) };
+  const options = { upsert: true };
+  const updatedDate = {
+    $set: {
+      availability: false,
+    },
+  };
+  const result2 = await roomsCollection.updateOne(query, updatedDate, options);
+  res.send({ result, result2 });
 });
 
 // Data Delete functions
-app.delete("/api/v1/booking/delete/:id", async (req, res) => {
-  const id = req.params.id;
+app.delete("/api/v1/booking/delete/", async (req, res) => {
+  const { _id, id } = req.query;
+  console.log(_id, id);
+  const find = { _id: new ObjectId(_id) };
+  const result = await bookingCollection.deleteOne(find);
   const query = { _id: new ObjectId(id) };
-  const result = await bookingCollection.deleteOne(query);
-  res.send(result);
+  const options = { upsert: true };
+  const updatedDate = {
+    $set: {
+      availability: true,
+    },
+  };
+  const result2 = await roomsCollection.updateOne(query, updatedDate, options);
+  res.send({ result, result2 });
 });
 // Data Update functions
 app.patch("/api/v1/booking/updatedate/:id", async (req, res) => {
