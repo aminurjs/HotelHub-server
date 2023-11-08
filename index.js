@@ -31,8 +31,17 @@ const bookingCollection = client.db("hotelhub").collection("booking");
 
 // Data get functions
 app.get("/api/v1/rooms", async (req, res) => {
-  const rooms = await roomsCollection.find().toArray();
-  res.send(rooms);
+  const sortValue = parseInt(req.query.sort);
+  if (sortValue) {
+    const rooms = await roomsCollection
+      .find()
+      .sort({ price: sortValue })
+      .toArray();
+    res.send(rooms);
+  } else {
+    const rooms = await roomsCollection.find().toArray();
+    res.send(rooms);
+  }
 });
 app.get("/api/v1/featured", async (req, res) => {
   const featured = await roomsCollection.find().skip(9).limit(3).toArray();
