@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "https://hotelhube.web.app",
+    origin: ["https://hotelhube.web.app", "http://localhost:5173"],
     credentials: true,
   })
 );
@@ -55,14 +55,14 @@ const verifyToken = (req, res, next) => {
 
 app.post("/api/v1/auth/access-token", async (req, res) => {
   const user = req.body;
-  const token = jwt.sign(user, process.env.SECRETE, { expiresIn: "1h" });
-  console.log(token);
+  const token = jwt.sign(user, process.env.SECRETE, { expiresIn: "365days" });
+
   res
-    .cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-    })
+    // .cookie("token", token, {
+    //   httpOnly: true,
+    //   secure: true,
+    //   sameSite: "none",
+    // })
     .send({ success: true });
 });
 
@@ -70,10 +70,7 @@ app.post("/api/v1/auth/access-token", async (req, res) => {
 app.get("/api/v1/rooms", async (req, res) => {
   const sortValue = parseInt(req.query.sort);
   if (sortValue) {
-    const rooms = await roomsCollection
-      .find()
-      .sort({ price: sortValue })
-      .toArray();
+    const rooms = await roomsCollection.find().sort({ price: sortValue }).toArray();
     res.send(rooms);
   } else {
     const rooms = await roomsCollection.find().toArray();
@@ -94,7 +91,7 @@ app.get("/api/v1/room/:id", async (req, res) => {
   const rooms = await roomsCollection.findOne(query);
   res.send(rooms);
 });
-app.get("/api/v1/booking/:email", verifyToken, async (req, res) => {
+app.get("/api/v1/booking/:email", async (req, res) => {
   const userEmail = req.params.email;
   const tokenEmail = req.user.email;
 
@@ -175,9 +172,7 @@ async function run() {
     await client.connect();
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
