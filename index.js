@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "https://hotelhube.web.app",
     credentials: true,
   })
 );
@@ -44,11 +44,9 @@ const verifyToken = (req, res, next) => {
   // verify a token
   jwt.verify(token, process.env.SECRETE, function (err, decoded) {
     if (err) {
-      console.log("err");
       return res.status(401).send({ message: "UnAuthorized Access" });
     }
     // attach decoded user so that others can get it
-    console.log(decoded);
     req.user = decoded;
     next();
   });
@@ -81,7 +79,6 @@ app.get("/api/v1/rooms", async (req, res) => {
       };
       await roomsCollection.updateOne(query2, updatedDate);
     } else if (currentDate > startDate && currentDate < endDate && booking.status === "pending") {
-      console.log("cholbe");
       await bookingCollection.updateOne(query, { $set: { status: "processing" } });
     }
   });
@@ -115,7 +112,6 @@ app.get("/api/v1/featured", async (req, res) => {
       };
       await roomsCollection.updateOne(query2, updatedDate);
     } else if (currentDate > startDate && currentDate < endDate && booking.status === "pending") {
-      console.log("cholbe");
       await bookingCollection.updateOne(query, { $set: { status: "processing" } });
     }
   });
@@ -152,7 +148,6 @@ app.get("/api/v1/booking/:email", verifyToken, async (req, res) => {
       };
       await roomsCollection.updateOne(query2, updatedDate);
     } else if (currentDate > startDate && currentDate < endDate && booking.status === "pending") {
-      console.log("cholbe");
       await bookingCollection.updateOne(query, { $set: { status: "processing" } });
     }
   });
@@ -238,14 +233,11 @@ app.patch("/api/v1/review/:id", async (req, res) => {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
-    // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } catch (err) {
+    console.log(err);
   } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
   }
 }
 run().catch(console.dir);
