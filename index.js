@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(
   cors({
-    origin: ["https://hotelhube.web.app", "http://localhost:5173"],
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
@@ -36,7 +36,6 @@ const bookingCollection = client.db("hotelhub").collection("booking");
 //verify token and  access
 const verifyToken = (req, res, next) => {
   const { token } = req.cookies;
-
   //if client does not send token
   if (!token) {
     return res.status(401).send({ message: "UnAuthorized Access" });
@@ -45,9 +44,11 @@ const verifyToken = (req, res, next) => {
   // verify a token
   jwt.verify(token, process.env.SECRETE, function (err, decoded) {
     if (err) {
+      console.log("err");
       return res.status(401).send({ message: "UnAuthorized Access" });
     }
     // attach decoded user so that others can get it
+    console.log(decoded);
     req.user = decoded;
     next();
   });
@@ -55,19 +56,36 @@ const verifyToken = (req, res, next) => {
 
 app.post("/api/v1/auth/access-token", async (req, res) => {
   const user = req.body;
-  const token = jwt.sign(user, process.env.SECRETE, { expiresIn: "365days" });
-
-  res
-    // .cookie("token", token, {
-    //   httpOnly: true,
-    //   secure: true,
-    //   sameSite: "none",
-    // })
-    .send({ success: true });
+  const token = jwt.sign(user, process.env.SECRETE);
+  res.send({ success: true, token });
 });
 
 // Data get functions
 app.get("/api/v1/rooms", async (req, res) => {
+  const bookings = await bookingCollection.find().toArray();
+
+  const currentDate = new Date();
+
+  bookings.forEach(async (booking) => {
+    const startDate = new Date(booking.startDate);
+    const endDate = new Date(booking.endDate);
+    const query = { _id: new ObjectId(booking._id) };
+
+    if (currentDate > endDate && booking.status !== "complete") {
+      await bookingCollection.updateOne(query, { $set: { status: "complete" } });
+      const query2 = { _id: new ObjectId(booking.id) };
+      const updatedDate = {
+        $set: {
+          availability: true,
+        },
+      };
+      await roomsCollection.updateOne(query2, updatedDate);
+    } else if (currentDate > startDate && currentDate < endDate && booking.status === "pending") {
+      console.log("cholbe");
+      await bookingCollection.updateOne(query, { $set: { status: "processing" } });
+    }
+  });
+
   const sortValue = parseInt(req.query.sort);
   if (sortValue) {
     const rooms = await roomsCollection.find().sort({ price: sortValue }).toArray();
@@ -78,6 +96,29 @@ app.get("/api/v1/rooms", async (req, res) => {
   }
 });
 app.get("/api/v1/featured", async (req, res) => {
+  const bookings = await bookingCollection.find().toArray();
+
+  const currentDate = new Date();
+
+  bookings.forEach(async (booking) => {
+    const startDate = new Date(booking.startDate);
+    const endDate = new Date(booking.endDate);
+    const query = { _id: new ObjectId(booking._id) };
+
+    if (currentDate > endDate && booking.status !== "complete") {
+      await bookingCollection.updateOne(query, { $set: { status: "complete" } });
+      const query2 = { _id: new ObjectId(booking.id) };
+      const updatedDate = {
+        $set: {
+          availability: true,
+        },
+      };
+      await roomsCollection.updateOne(query2, updatedDate);
+    } else if (currentDate > startDate && currentDate < endDate && booking.status === "pending") {
+      console.log("cholbe");
+      await bookingCollection.updateOne(query, { $set: { status: "processing" } });
+    }
+  });
   const featured = await roomsCollection.find().skip(9).limit(3).toArray();
   res.send(featured);
 });
@@ -91,7 +132,30 @@ app.get("/api/v1/room/:id", async (req, res) => {
   const rooms = await roomsCollection.findOne(query);
   res.send(rooms);
 });
-app.get("/api/v1/booking/:email", async (req, res) => {
+app.get("/api/v1/booking/:email", verifyToken, async (req, res) => {
+  const bookings = await bookingCollection.find().toArray();
+
+  const currentDate = new Date();
+
+  bookings.forEach(async (booking) => {
+    const startDate = new Date(booking.startDate);
+    const endDate = new Date(booking.endDate);
+    const query = { _id: new ObjectId(booking._id) };
+
+    if (currentDate > endDate && booking.status !== "complete") {
+      await bookingCollection.updateOne(query, { $set: { status: "complete" } });
+      const query2 = { _id: new ObjectId(booking.id) };
+      const updatedDate = {
+        $set: {
+          availability: true,
+        },
+      };
+      await roomsCollection.updateOne(query2, updatedDate);
+    } else if (currentDate > startDate && currentDate < endDate && booking.status === "pending") {
+      console.log("cholbe");
+      await bookingCollection.updateOne(query, { $set: { status: "processing" } });
+    }
+  });
   const userEmail = req.params.email;
   const tokenEmail = req.user.email;
 
@@ -121,18 +185,24 @@ app.post("/api/v1/booking", async (req, res) => {
 
 // Data Delete functions
 app.delete("/api/v1/booking/delete/", async (req, res) => {
-  const { _id, id } = req.query;
-  console.log(_id, id);
+  const { _id, id, type, currentDate } = req.query;
   const find = { _id: new ObjectId(_id) };
-  const result = await bookingCollection.deleteOne(find);
+  let result;
+  if (type === "cancel") {
+    result = await bookingCollection.updateOne(find, { $set: { status: "canceled" } });
+  } else if (type === "checkout") {
+    result = await bookingCollection.updateOne(find, {
+      $set: { endDate: currentDate, status: "canceled" },
+    });
+  }
+
   const query = { _id: new ObjectId(id) };
-  const options = { upsert: true };
   const updatedDate = {
     $set: {
       availability: true,
     },
   };
-  const result2 = await roomsCollection.updateOne(query, updatedDate, options);
+  const result2 = await roomsCollection.updateOne(query, updatedDate);
   res.send({ result, result2 });
 });
 // Data Update functions
